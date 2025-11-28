@@ -1,0 +1,978 @@
+{
+    "info": {
+        "_postman_id": "woma-ecommerce-api-collection",
+        "name": "Woma E-commerce API",
+        "description": "Complete API collection for Woma E-commerce backend with authentication, products, categories, and orders management",
+        "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+    },
+    "auth": {
+        "type": "bearer",
+        "bearer": [
+            {
+                "key": "token",
+                "value": "{{access_token}}",
+                "type": "string"
+            }
+        ]
+    },
+    "item": [
+        {
+            "name": "Authentication",
+            "item": [
+                {
+                    "name": "Register User",
+                    "request": {
+                        "auth": {
+                            "type": "noauth"
+                        },
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"email\": \"customer@example.com\",\n  \"username\": \"customer1\",\n  \"password\": \"SecurePass123\",\n  \"password2\": \"SecurePass123\",\n  \"first_name\": \"John\",\n  \"last_name\": \"Doe\",\n  \"role\": \"customer\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/api/v1/auth/register/",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "v1",
+                                "auth",
+                                "register",
+                                ""
+                            ]
+                        },
+                        "description": "Register a new user (customer or admin)"
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Login",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "if (pm.response.code === 200) {",
+                                    "    var jsonData = pm.response.json();",
+                                    "    pm.environment.set(\"access_token\", jsonData.tokens.access);",
+                                    "    pm.environment.set(\"refresh_token\", jsonData.tokens.refresh);",
+                                    "}"
+                                ],
+                                "type": "text/javascript"
+                            }
+                        }
+                    ],
+                    "request": {
+                        "auth": {
+                            "type": "noauth"
+                        },
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"email\": \"admin@woma.com\",\n  \"password\": \"admin123\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/api/v1/auth/login/",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "v1",
+                                "auth",
+                                "login",
+                                ""
+                            ]
+                        },
+                        "description": "Login and get JWT tokens. Auto-saves tokens to environment variables."
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Refresh Token",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "if (pm.response.code === 200) {",
+                                    "    var jsonData = pm.response.json();",
+                                    "    pm.environment.set(\"access_token\", jsonData.access);",
+                                    "}"
+                                ],
+                                "type": "text/javascript"
+                            }
+                        }
+                    ],
+                    "request": {
+                        "auth": {
+                            "type": "noauth"
+                        },
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"refresh\": \"{{refresh_token}}\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/api/v1/auth/refresh/",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "v1",
+                                "auth",
+                                "refresh",
+                                ""
+                            ]
+                        },
+                        "description": "Refresh access token using refresh token"
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Get Profile",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{base_url}}/api/v1/auth/profile/",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "v1",
+                                "auth",
+                                "profile",
+                                ""
+                            ]
+                        },
+                        "description": "Get current user profile"
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Update Profile",
+                    "request": {
+                        "method": "PUT",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"first_name\": \"Updated\",\n  \"last_name\": \"Name\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/api/v1/auth/profile/",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "v1",
+                                "auth",
+                                "profile",
+                                ""
+                            ]
+                        },
+                        "description": "Update user profile"
+                    },
+                    "response": []
+                }
+            ],
+            "description": "User authentication endpoints"
+        },
+        {
+            "name": "Admin - Categories",
+            "item": [
+                {
+                    "name": "List All Categories",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{base_url}}/api/v1/admin/categories/",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "v1",
+                                "admin",
+                                "categories",
+                                ""
+                            ]
+                        },
+                        "description": "Get all categories (Admin only)"
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Create Category",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "if (pm.response.code === 201) {",
+                                    "    var jsonData = pm.response.json();",
+                                    "    pm.environment.set(\"category_id\", jsonData.id);",
+                                    "    pm.environment.set(\"category_slug\", jsonData.slug);",
+                                    "}"
+                                ],
+                                "type": "text/javascript"
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"name\": \"Electronics\",\n  \"description\": \"Electronic devices and accessories\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/api/v1/admin/categories/",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "v1",
+                                "admin",
+                                "categories",
+                                ""
+                            ]
+                        },
+                        "description": "Create a new category (Admin only). Auto-saves category ID."
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Get Category by ID",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{base_url}}/api/v1/admin/categories/{{category_id}}/",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "v1",
+                                "admin",
+                                "categories",
+                                "{{category_id}}",
+                                ""
+                            ]
+                        },
+                        "description": "Get category details by ID (Admin only)"
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Update Category",
+                    "request": {
+                        "method": "PUT",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"name\": \"Electronics Updated\",\n  \"description\": \"Updated description for electronics\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/api/v1/admin/categories/{{category_id}}/",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "v1",
+                                "admin",
+                                "categories",
+                                "{{category_id}}",
+                                ""
+                            ]
+                        },
+                        "description": "Update category (Admin only)"
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Delete Category",
+                    "request": {
+                        "method": "DELETE",
+                        "header": [],
+                        "url": {
+                            "raw": "{{base_url}}/api/v1/admin/categories/{{category_id}}/",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "v1",
+                                "admin",
+                                "categories",
+                                "{{category_id}}",
+                                ""
+                            ]
+                        },
+                        "description": "Delete category (Admin only)"
+                    },
+                    "response": []
+                }
+            ],
+            "description": "Admin category management endpoints"
+        },
+        {
+            "name": "Admin - Products",
+            "item": [
+                {
+                    "name": "List All Products",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{base_url}}/api/v1/admin/products/",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "v1",
+                                "admin",
+                                "products",
+                                ""
+                            ]
+                        },
+                        "description": "Get all products (Admin only)"
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Filter Products by Category",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{base_url}}/api/v1/admin/products/?category={{category_id}}",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "v1",
+                                "admin",
+                                "products",
+                                ""
+                            ],
+                            "query": [
+                                {
+                                    "key": "category",
+                                    "value": "{{category_id}}"
+                                }
+                            ]
+                        },
+                        "description": "Filter products by category (Admin only)"
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Search Products",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{base_url}}/api/v1/admin/products/?search=headphones",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "v1",
+                                "admin",
+                                "products",
+                                ""
+                            ],
+                            "query": [
+                                {
+                                    "key": "search",
+                                    "value": "headphones"
+                                }
+                            ]
+                        },
+                        "description": "Search products (Admin only)"
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Create Product",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "if (pm.response.code === 201) {",
+                                    "    var jsonData = pm.response.json();",
+                                    "    pm.environment.set(\"product_id\", jsonData.id);",
+                                    "    pm.environment.set(\"product_slug\", jsonData.slug);",
+                                    "}"
+                                ],
+                                "type": "text/javascript"
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"category\": \"{{category_id}}\",\n  \"name\": \"Wireless Headphones Pro\",\n  \"description\": \"Premium noise-cancelling wireless headphones with 30-hour battery life\",\n  \"price\": \"199.99\",\n  \"stock_quantity\": 50,\n  \"image_url\": \"https://example.com/headphones.jpg\",\n  \"is_active\": true\n}"
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/api/v1/admin/products/",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "v1",
+                                "admin",
+                                "products",
+                                ""
+                            ]
+                        },
+                        "description": "Create a new product (Admin only). Auto-saves product ID."
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Get Product by ID",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{base_url}}/api/v1/admin/products/{{product_id}}/",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "v1",
+                                "admin",
+                                "products",
+                                "{{product_id}}",
+                                ""
+                            ]
+                        },
+                        "description": "Get product details by ID (Admin only)"
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Update Product",
+                    "request": {
+                        "method": "PUT",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"category\": \"{{category_id}}\",\n  \"name\": \"Wireless Headphones Pro - Updated\",\n  \"description\": \"Updated premium noise-cancelling wireless headphones\",\n  \"price\": \"179.99\",\n  \"stock_quantity\": 75,\n  \"image_url\": \"https://example.com/headphones-new.jpg\",\n  \"is_active\": true\n}"
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/api/v1/admin/products/{{product_id}}/",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "v1",
+                                "admin",
+                                "products",
+                                "{{product_id}}",
+                                ""
+                            ]
+                        },
+                        "description": "Update product (Admin only)"
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Delete Product",
+                    "request": {
+                        "method": "DELETE",
+                        "header": [],
+                        "url": {
+                            "raw": "{{base_url}}/api/v1/admin/products/{{product_id}}/",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "v1",
+                                "admin",
+                                "products",
+                                "{{product_id}}",
+                                ""
+                            ]
+                        },
+                        "description": "Delete product (Admin only)"
+                    },
+                    "response": []
+                }
+            ],
+            "description": "Admin product management endpoints"
+        },
+        {
+            "name": "Admin - Orders",
+            "item": [
+                {
+                    "name": "List All Orders",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{base_url}}/api/v1/admin/orders/",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "v1",
+                                "admin",
+                                "orders",
+                                ""
+                            ]
+                        },
+                        "description": "Get all orders (Admin only)"
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Filter Orders by Status",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{base_url}}/api/v1/admin/orders/?status=pending",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "v1",
+                                "admin",
+                                "orders",
+                                ""
+                            ],
+                            "query": [
+                                {
+                                    "key": "status",
+                                    "value": "pending"
+                                }
+                            ]
+                        },
+                        "description": "Filter orders by status: pending, processing, completed, cancelled"
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Get Order by ID",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{base_url}}/api/v1/admin/orders/{{order_id}}/",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "v1",
+                                "admin",
+                                "orders",
+                                "{{order_id}}",
+                                ""
+                            ]
+                        },
+                        "description": "Get order details by ID (Admin only)"
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Update Order Status",
+                    "request": {
+                        "method": "PATCH",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"status\": \"processing\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/api/v1/admin/orders/{{order_id}}/",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "v1",
+                                "admin",
+                                "orders",
+                                "{{order_id}}",
+                                ""
+                            ]
+                        },
+                        "description": "Update order status (Admin only). Status options: pending, processing, completed, cancelled"
+                    },
+                    "response": []
+                }
+            ],
+            "description": "Admin order management endpoints"
+        },
+        {
+            "name": "Public - Categories",
+            "item": [
+                {
+                    "name": "List Categories",
+                    "request": {
+                        "auth": {
+                            "type": "noauth"
+                        },
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{base_url}}/api/v1/categories/",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "v1",
+                                "categories",
+                                ""
+                            ]
+                        },
+                        "description": "Get all categories (Public)"
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Get Category by Slug",
+                    "request": {
+                        "auth": {
+                            "type": "noauth"
+                        },
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{base_url}}/api/v1/categories/{{category_slug}}/",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "v1",
+                                "categories",
+                                "{{category_slug}}",
+                                ""
+                            ]
+                        },
+                        "description": "Get category by slug (Public)"
+                    },
+                    "response": []
+                }
+            ],
+            "description": "Public category browsing endpoints"
+        },
+        {
+            "name": "Public - Products",
+            "item": [
+                {
+                    "name": "List Products",
+                    "request": {
+                        "auth": {
+                            "type": "noauth"
+                        },
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{base_url}}/api/v1/products/",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "v1",
+                                "products",
+                                ""
+                            ]
+                        },
+                        "description": "Get all active products (Public)"
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Filter Products by Category",
+                    "request": {
+                        "auth": {
+                            "type": "noauth"
+                        },
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{base_url}}/api/v1/products/?category__slug={{category_slug}}",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "v1",
+                                "products",
+                                ""
+                            ],
+                            "query": [
+                                {
+                                    "key": "category__slug",
+                                    "value": "{{category_slug}}"
+                                }
+                            ]
+                        },
+                        "description": "Filter products by category slug (Public)"
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Search Products",
+                    "request": {
+                        "auth": {
+                            "type": "noauth"
+                        },
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{base_url}}/api/v1/products/?search=wireless",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "v1",
+                                "products",
+                                ""
+                            ],
+                            "query": [
+                                {
+                                    "key": "search",
+                                    "value": "wireless"
+                                }
+                            ]
+                        },
+                        "description": "Search products by name or description (Public)"
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Get Product by Slug",
+                    "request": {
+                        "auth": {
+                            "type": "noauth"
+                        },
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{base_url}}/api/v1/products/{{product_slug}}/",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "v1",
+                                "products",
+                                "{{product_slug}}",
+                                ""
+                            ]
+                        },
+                        "description": "Get product details by slug (Public)"
+                    },
+                    "response": []
+                }
+            ],
+            "description": "Public product browsing endpoints"
+        },
+        {
+            "name": "Customer - Orders",
+            "item": [
+                {
+                    "name": "List My Orders",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{base_url}}/api/v1/orders/",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "v1",
+                                "orders",
+                                ""
+                            ]
+                        },
+                        "description": "Get current user's orders"
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Create Order",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "if (pm.response.code === 201) {",
+                                    "    var jsonData = pm.response.json();",
+                                    "    pm.environment.set(\"order_id\", jsonData.id);",
+                                    "}"
+                                ],
+                                "type": "text/javascript"
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"shipping_address\": \"123 Main Street, Apt 4B, New York, NY 10001\",\n  \"items\": [\n    {\n      \"product\": \"{{product_id}}\",\n      \"quantity\": 2\n    }\n  ]\n}"
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/api/v1/orders/",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "v1",
+                                "orders",
+                                ""
+                            ]
+                        },
+                        "description": "Create a new order. Auto-saves order ID."
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Get Order by ID",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{base_url}}/api/v1/orders/{{order_id}}/",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "v1",
+                                "orders",
+                                "{{order_id}}",
+                                ""
+                            ]
+                        },
+                        "description": "Get order details by ID (own orders only)"
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Filter My Orders by Status",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{base_url}}/api/v1/orders/?status=pending",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "v1",
+                                "orders",
+                                ""
+                            ],
+                            "query": [
+                                {
+                                    "key": "status",
+                                    "value": "pending"
+                                }
+                            ]
+                        },
+                        "description": "Filter own orders by status"
+                    },
+                    "response": []
+                }
+            ],
+            "description": "Customer order management endpoints"
+        }
+    ],
+    "variable": [
+        {
+            "key": "base_url",
+            "value": "http://localhost:8000",
+            "type": "string"
+        }
+    ]
+}
