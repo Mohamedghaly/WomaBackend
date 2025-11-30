@@ -1,0 +1,25 @@
+# Netlify Deployment Configuration
+# This file tells Netlify how to deploy your dashboard
+
+[build]
+  # The directory to publish (your dashboard folder)
+  publish = "dashboard"
+  
+  # No build command needed for static HTML/CSS/JS
+  command = ""
+
+# Redirect rules for SPA-like behavior
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
+  force = false
+  
+# Headers for security and CORS
+[[headers]]
+  for = "/*"
+  [headers.values]
+    X-Frame-Options = "DENY"
+    X-Content-Type-Options = "nosniff"
+    X-XSS-Protection = "1; mode=block"
+    Referrer-Policy = "strict-origin-when-cross-origin"

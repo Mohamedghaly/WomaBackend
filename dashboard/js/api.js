@@ -1,7 +1,7 @@
 // API Configuration and Helper Functions
 const API_BASE_URL = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
     ? 'http://localhost:8000/api/v1'
-    : 'https://woma-backend.onrender.com/api/v1'; // REPLACE THIS WITH YOUR RENDER URL
+    : 'https://warm-hippopotamus-ghaly-fafb8bcd.koyeb.app/api/v1';
 
 // API Client
 class API {
