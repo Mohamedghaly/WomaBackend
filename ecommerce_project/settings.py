@@ -22,6 +22,8 @@ DEBUG = os.getenv('DEBUG', 'True') == 'True'
 ALLOWED_HOSTS = ['*']
 
 # Application definition
+AUTH_USER_MODEL = 'accounts.User'
+
 INSTALLED_APPS = [
     'django.contrib.admin',
     'django.contrib.auth',
@@ -75,7 +77,16 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'ecommerce_project.wsgi.application'
 
-# ... Database settings ...
+# Database settings
+DATABASES = {
+    'default': {
+        'ENGINE': 'ecommerce_project.turso_backend',
+        'NAME': os.getenv('TURSO_DATABASE_URL', 'libsql://your-db-url'),
+        'OPTIONS': {
+            'auth_token': os.getenv('TURSO_AUTH_TOKEN'),
+        },
+    }
+}
 
 # Static files (CSS, JavaScript, Images)
 STATIC_URL = 'static/'
@@ -113,11 +124,18 @@ SIMPLE_JWT = {
 }
 
 # CORS Configuration
+# Allow requests from local development and production frontend
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:3000",
     "http://localhost:8080",
     "http://127.0.0.1:3000",
     "http://127.0.0.1:8080",
+]
+
+# Add production frontend URL when deployed
+CORS_ALLOWED_ORIGIN_REGEXES = [
+    r"^https://.*\.netlify\.app$",
+    r"^https://.*\.koyeb\.app$",
 ]
 
 CORS_ALLOW_CREDENTIALS = True
