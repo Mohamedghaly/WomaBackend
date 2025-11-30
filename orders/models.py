@@ -16,10 +16,12 @@ class Order(models.Model):
     )
     
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    customer = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='orders')
+    customer = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='orders', null=True, blank=True)
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')
-    total_amount = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    total_amount = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
     shipping_address = models.TextField()
+    customer_name = models.CharField(max_length=255, blank=True, null=True)
+    customer_email = models.EmailField(blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     
@@ -32,7 +34,7 @@ class Order(models.Model):
         ]
     
     def __str__(self):
-        return f"Order {self.id} - {self.customer.email}"
+        return f"Order {self.id} - {self.customer_email or 'Guest'}"
     
     def calculate_total(self):
         """Calculate and update total amount from order items."""
@@ -48,13 +50,12 @@ class OrderItem(models.Model):
     Supports ordering both simple products and product variations.
     """
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    order = models.ForeignKey(Order, on_delete=models.CASCADE, related_name='items')
-    product = models.ForeignKey('products.Product', on_delete=models.PROTECT, related_name='order_items')
+    order = models.ForeignKey(Order, related_name='items', on_delete=models.CASCADE)
+    product = models.ForeignKey(Product, related_name='order_items', on_delete=models.PROTECT)
     variation = models.ForeignKey(
-        'products.ProductVariation', 
-        on_delete=models.PROTECT, 
+        'products.ProductVariation',
         related_name='order_items',
-        blank=True,
+        on_delete=models.PROTECT,
         null=True,
         help_text="Specific product variation ordered (e.g., Red-Large)"
     )

@@ -1,182 +1,107 @@
 from rest_framework import serializers
 from .models import Order, OrderItem
-from products.serializers import ProductListSerializer
+from products.models import Product, ProductVariation
 
 
 class OrderItemSerializer(serializers.ModelSerializer):
-    """Serializer for OrderItem model."""
-    
+    """Serializer for order items."""
     product_name = serializers.CharField(source='product.name', read_only=True)
-    variation_details = serializers.SerializerMethodField()
-    subtotal = serializers.DecimalField(max_digits=10, decimal_places=2, read_only=True)
+    variation_name = serializers.CharField(source='variation.__str__', read_only=True)
     
     class Meta:
         model = OrderItem
-        fields = ('id', 'product', 'product_name', 'variation', 'variation_details', 
-                  'quantity', 'price_at_purchase', 'subtotal')
-        read_only_fields = ('id', 'price_at_purchase', 'subtotal')
-    
-    def get_variation_details(self, obj):
-        """Get variation details if present."""
-        if obj.variation:
-            return {
-                'id': str(obj.variation.id),
-                'sku': obj.variation.sku,
-                'color': obj.variation.color,
-                'size': obj.variation.size,
-                'material': obj.variation.material,
-            }
-        return None
-    
-    def validate_quantity(self, value):
-        """Ensure quantity is positive."""
-        if value <= 0:
-            raise serializers.ValidationError("Quantity must be greater than zero.")
-        return value
+        fields = ('id', 'product', 'variation', 'quantity', 'price_at_purchase', 'subtotal', 'product_name', 'variation_name')
+        read_only_fields = ('price_at_purchase',)
 
 
-class OrderItemCreateSerializer(serializers.ModelSerializer):
+class OrderCreateItemSerializer(serializers.Serializer):
     """Serializer for creating order items."""
-    
-    class Meta:
-        model = OrderItem
-        fields = ('product', 'variation', 'quantity')
-    
-    def validate_quantity(self, value):
-        """Ensure quantity is positive."""
-        if value <= 0:
-            raise serializers.ValidationError("Quantity must be greater than zero.")
-        return value
-    
-    def validate(self, data):
-        """Validate variation belongs to product."""
-        variation = data.get('variation')
-        product = data.get('product')
-        
-        if variation and variation.product != product:
-            raise serializers.ValidationError({
-                "variation": "This variation does not belong to the selected product."
-            })
-        
-        return data
-
-
-class OrderSerializer(serializers.ModelSerializer):
-    """Serializer for Order model."""
-    
-    items = OrderItemSerializer(many=True, read_only=True)
-    customer_email = serializers.EmailField(source='customer.email', read_only=True)
-    
-    class Meta:
-        model = Order
-        fields = (
-            'id', 'customer', 'customer_email', 'status', 
-            'total_amount', 'shipping_address', 
-            'items', 'created_at', 'updated_at'
-        )
-        read_only_fields = ('id', 'customer', 'total_amount', 'created_at', 'updated_at')
+    product_id = serializers.UUIDField()
+    variation_id = serializers.UUIDField(required=False, allow_null=True)
+    quantity = serializers.IntegerField(min_value=1)
+    price = serializers.DecimalField(max_digits=10, decimal_places=2, required=False)
 
 
 class OrderCreateSerializer(serializers.ModelSerializer):
     """Serializer for creating orders."""
-    
-    items = OrderItemCreateSerializer(many=True, write_only=True)
+    items = OrderCreateItemSerializer(many=True, write_only=True)
     
     class Meta:
         model = Order
-        fields = ('shipping_address', 'items')
-    
-    def validate_items(self, value):
-        """Ensure items list is not empty."""
-        if not value:
-            raise serializers.ValidationError("Order must contain at least one item.")
-        return value
-    
-    def validate(self, data):
-        """Validate that products with variations must be ordered via variation."""
-        items = data.get('items', [])
-        
-        for item_data in items:
-            product = item_data.get('product')
-            variation = item_data.get('variation')
-            
-            # Check if product has active variations
-            if product and product.variations.filter(is_active=True).exists():
-                if not variation:
-                    raise serializers.ValidationError({
-                        'items': f"Product '{product.name}' has variations. Please select a specific variation."
-                    })
-        
-        return data
+        fields = ('id', 'shipping_address', 'items', 'total_amount', 'customer_name', 'customer_email')
+        read_only_fields = ('total_amount', 'id')
     
     def create(self, validated_data):
-        """Create order with items."""
         items_data = validated_data.pop('items')
         order = Order.objects.create(**validated_data)
         
-        # Create order items
         for item_data in items_data:
-            product = item_data['product']
-            variation = item_data.get('variation')
+            product = Product.objects.get(id=item_data['product_id'])
+            variation = None
+            if item_data.get('variation_id'):
+                try:
+                    variation = ProductVariation.objects.get(id=item_data['variation_id'])
+                except ProductVariation.DoesNotExist:
+                    pass
+            
             quantity = item_data['quantity']
             
-            # For products with variations, variation is required
+            # Check stock
             if variation:
-                # Check variation stock
                 if variation.stock_quantity < quantity:
-                    order.delete()
-                    raise serializers.ValidationError({
-                        'items': f"Insufficient stock for {variation}. Available: {variation.stock_quantity}"
-                    })
-                
-                # Create order item with variation
-                OrderItem.objects.create(
-                    order=order,
-                    product=product,
-                    variation=variation,
-                    quantity=quantity,
-                    price_at_purchase=variation.final_price
-                )
-                
-                # Update variation stock
+                    raise serializers.ValidationError(f"Not enough stock for {variation}")
+            elif product.stock_quantity < quantity:
+                raise serializers.ValidationError(f"Not enough stock for {product.name}")
+            
+            OrderItem.objects.create(
+                order=order,
+                product=product,
+                variation=variation,
+                quantity=quantity,
+                price_at_purchase=item_data.get('price') or (variation.final_price if variation else product.price)
+            )
+            
+            # Update stock
+            if variation:
                 variation.stock_quantity -= quantity
-                variation.save(update_fields=['stock_quantity'])
+                variation.save()
             else:
-                # Fallback for products without variations (legacy support)
-                if product.stock_quantity < quantity:
-                    order.delete()
-                    raise serializers.ValidationError({
-                        'items': f"Insufficient stock for {product.name}. Available: {product.stock_quantity}"
-                    })
-                
-                # Create order item without variation
-                OrderItem.objects.create(
-                    order=order,
-                    product=product,
-                    quantity=quantity,
-                    price_at_purchase=product.price
-                )
-                
-                # Update product stock
                 product.stock_quantity -= quantity
-                product.save(update_fields=['stock_quantity'])
+                product.save()
         
-        # Calculate order total
         order.calculate_total()
-        
         return order
+
+
+class OrderSerializer(serializers.ModelSerializer):
+    """Detailed serializer for order view."""
+    items = OrderItemSerializer(many=True, read_only=True)
+    customer_email = serializers.SerializerMethodField()
+    
+    class Meta:
+        model = Order
+        fields = ('id', 'customer', 'customer_email', 'customer_name', 'status', 'total_amount', 'shipping_address', 'created_at', 'items')
+        read_only_fields = ('customer', 'status', 'total_amount', 'created_at')
+
+    def get_customer_email(self, obj):
+        if obj.customer:
+            return obj.customer.email
+        return obj.customer_email
 
 
 class OrderListSerializer(serializers.ModelSerializer):
     """Lightweight serializer for order list view."""
-    
-    customer_email = serializers.EmailField(source='customer.email', read_only=True)
+    customer_email = serializers.SerializerMethodField()
     item_count = serializers.SerializerMethodField()
     
     class Meta:
         model = Order
-        fields = ('id', 'customer_email', 'status', 'total_amount', 'item_count', 'created_at')
+        fields = ('id', 'customer_email', 'customer_name', 'status', 'total_amount', 'item_count', 'created_at')
+    
+    def get_customer_email(self, obj):
+        if obj.customer:
+            return obj.customer.email
+        return obj.customer_email
     
     def get_item_count(self, obj):
-        """Get count of items in order."""
         return obj.items.count()

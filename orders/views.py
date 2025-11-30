@@ -1,87 +1,44 @@
-from rest_framework import viewsets, permissions, status
+from rest_framework import viewsets, status
+from rest_framework.decorators import action
 from rest_framework.response import Response
-from django_filters.rest_framework import DjangoFilterBackend
-from rest_framework import filters
+from rest_framework.permissions import IsAuthenticated, IsAdminUser, AllowAny
 from .models import Order
-from .serializers import (
-    OrderSerializer, 
-    OrderCreateSerializer, 
-    OrderListSerializer
-)
-from .permissions import IsOrderOwnerOrAdmin
-from products.permissions import IsAdminUser
+from .serializers import OrderSerializer, OrderCreateSerializer, OrderListSerializer
 
 
-class AdminOrderViewSet(viewsets.ReadOnlyModelViewSet):
+class AdminOrderViewSet(viewsets.ModelViewSet):
     """
-    Admin-only operations for viewing and managing orders.
-    
-    Endpoints:
-    - GET    /api/v1/admin/orders/        - List all orders
-    - GET    /api/v1/admin/orders/{id}/   - Get order details
-    - PATCH  /api/v1/admin/orders/{id}/   - Update order status
+    Admin viewset for managing all orders.
+    Only accessible by admin users.
     """
-    queryset = Order.objects.select_related('customer').prefetch_related('items__product').all()
+    queryset = Order.objects.all()
     serializer_class = OrderSerializer
     permission_classes = [IsAdminUser]
-    filter_backends = [DjangoFilterBackend, filters.OrderingFilter]
-    filterset_fields = ['status', 'customer']
-    ordering_fields = ['created_at', 'total_amount']
-    ordering = ['-created_at']
-    lookup_field = 'id'
     
     def get_serializer_class(self):
-        """Use lightweight serializer for list view."""
         if self.action == 'list':
             return OrderListSerializer
         return OrderSerializer
-    
-    def partial_update(self, request, *args, **kwargs):
-        """Allow admin to update order status."""
-        instance = self.get_object()
-        
-        # Only allow status updates
-        if 'status' not in request.data:
-            return Response({
-                'error': 'Only status can be updated'
-            }, status=status.HTTP_400_BAD_REQUEST)
-        
-        new_status = request.data.get('status')
-        if new_status not in dict(Order.STATUS_CHOICES):
-            return Response({
-                'error': 'Invalid status value'
-            }, status=status.HTTP_400_BAD_REQUEST)
-        
-        instance.status = new_status
-        instance.save(update_fields=['status'])
-        
-        serializer = self.get_serializer(instance)
-        return Response(serializer.data)
 
 
 class CustomerOrderViewSet(viewsets.ModelViewSet):
     """
-    Customer operations for orders.
-    
-    Endpoints:
-    - GET  /api/v1/orders/      - List customer's orders
-    - POST /api/v1/orders/      - Create new order
-    - GET  /api/v1/orders/{id}/ - Get order details
+    Customer viewset for managing their own orders.
     """
     serializer_class = OrderSerializer
-    permission_classes = [permissions.IsAuthenticated, IsOrderOwnerOrAdmin]
-    filter_backends = [DjangoFilterBackend, filters.OrderingFilter]
-    filterset_fields = ['status']
-    ordering_fields = ['created_at', 'total_amount']
-    ordering = ['-created_at']
-    lookup_field = 'id'
+    permission_classes = [IsAuthenticated]
     
     def get_queryset(self):
-        """Return only orders for the current user (unless admin)."""
-        user = self.request.user
-        if hasattr(user, 'role') and user.role == 'admin':
-            return Order.objects.select_related('customer').prefetch_related('items__product').all()
-        return Order.objects.filter(customer=user).select_related('customer').prefetch_related('items__product')
+        """Return only current user's orders."""
+        if self.request.user.is_authenticated:
+            return Order.objects.filter(customer=self.request.user).select_related('customer').prefetch_related('items__product')
+        return Order.objects.none()
+    
+    def get_permissions(self):
+        """Allow anyone to create orders, but only authenticated users to list/retrieve."""
+        if self.action == 'create':
+            return [AllowAny()]
+        return [IsAuthenticated()]
     
     def get_serializer_class(self):
         """Use appropriate serializer based on action."""
@@ -92,14 +49,21 @@ class CustomerOrderViewSet(viewsets.ModelViewSet):
         return OrderSerializer
     
     def perform_create(self, serializer):
-        """Set the customer to the current user."""
-        serializer.save(customer=self.request.user)
-    
+        """Set the customer if authenticated."""
+        if self.request.user.is_authenticated:
+            serializer.save(customer=self.request.user)
+        else:
+            serializer.save(customer=None)
+            
     def create(self, request, *args, **kwargs):
         """Create order and return detailed response."""
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        order = serializer.save(customer=request.user)
+        
+        if request.user.is_authenticated:
+            order = serializer.save(customer=request.user)
+        else:
+            order = serializer.save(customer=None)
         
         # Return full order details
         response_serializer = OrderSerializer(order)
