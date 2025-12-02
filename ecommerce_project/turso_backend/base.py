@@ -37,7 +37,17 @@ class TursoCursor:
                 self.description = None
                 
         except Exception as e:
-            # Re-raise as sqlite3 error?
+            # Better error reporting
+            import sys
+            print(f"Turso Database Error:", file=sys.stderr)
+            print(f"  SQL: {sql}", file=sys.stderr)
+            print(f"  Params: {params}", file=sys.stderr)
+            print(f"  Error: {str(e)}", file=sys.stderr)
+            
+            # Try to extract more detail if it's a libsql error
+            if hasattr(e, '__dict__'):
+                print(f"  Error details: {e.__dict__}", file=sys.stderr)
+            
             raise e
             
         return self
@@ -75,6 +85,11 @@ class TursoCursor:
 
 class TursoConnection:
     def __init__(self, url, token):
+        # Convert libsql:// to https:// to force HTTP protocol instead of WebSocket
+        # This avoids 505 WebSocket handshake errors
+        if url.startswith('libsql://'):
+            url = url.replace('libsql://', 'https://')
+        
         # Use sync client which handles the loop
         self.client = libsql_client.create_client_sync(url, auth_token=token)
         self.client.__enter__()
