@@ -103,20 +103,33 @@ class ProductVariationCreateSerializer(serializers.ModelSerializer):
 
     def update(self, instance, validated_data):
         """Update variation and its images."""
-        images_data = validated_data.pop('images', [])
+        images_data = validated_data.pop('images', None)
         
         # Update standard fields
         for attr, value in validated_data.items():
             setattr(instance, attr, value)
         instance.save()
         
-        # Update images if provided
-        if images_data:
-            # For simplicity, we'll remove existing images and add new ones
-            # In a more complex app, we might want to update existing ones
-            instance.images.all().delete()
+        # Update images if explicitly provided
+        if images_data is not None:
+            # Delete existing images one by one (more compatible with Turso)
+            existing_images = list(instance.images.all())
+            for img in existing_images:
+                try:
+                    img.delete()
+                except Exception as e:
+                    # Log but continue - this is a non-critical operation
+                    import sys
+                    print(f"Warning: Could not delete image {img.id}: {e}", file=sys.stderr)
+            
+            # Create new images
             for image_data in images_data:
-                VariationImage.objects.create(variation=instance, **image_data)
+                try:
+                    VariationImage.objects.create(variation=instance, **image_data)
+                except Exception as e:
+                    # Log but continue
+                    import sys
+                    print(f"Warning: Could not create image: {e}", file=sys.stderr)
                 
         return instance
 

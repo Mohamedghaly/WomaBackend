@@ -80,6 +80,34 @@ class AdminProductVariationViewSet(viewsets.ModelViewSet):
             return ProductVariationCreateSerializer
         return ProductVariationSerializer
     
+    def update(self, request, *args, **kwargs):
+        """Override update to add better error handling for Turso."""
+        try:
+            return super().update(request, *args, **kwargs)
+        except Exception as e:
+            import sys
+            import traceback
+            print(f"❌ Error updating variation: {str(e)}", file=sys.stderr)
+            traceback.print_exc()
+            return Response(
+                {'error': f'Failed to update variation: {str(e)}'},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+    
+    def partial_update(self, request, *args, **kwargs):
+        """Override partial_update to add better error handling for Turso."""
+        try:
+            return super().partial_update(request, *args, **kwargs)
+        except Exception as e:
+            import sys
+            import traceback
+            print(f"❌ Error partially updating variation: {str(e)}", file=sys.stderr)
+            traceback.print_exc()
+            return Response(
+                {'error': f'Failed to update variation: {str(e)}'},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+    
     @action(detail=True, methods=['post'])
     def add_image(self, request, id=None):
         """Add an image to a variation."""
