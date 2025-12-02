@@ -26,6 +26,8 @@ class VariationImageSerializer(serializers.ModelSerializer):
         read_only_fields = ('id', 'created_at')
 
 
+from core.models import Color
+
 class ProductVariationSerializer(serializers.ModelSerializer):
     """Serializer for ProductVariation model with dynamic attributes."""
     
@@ -34,15 +36,31 @@ class ProductVariationSerializer(serializers.ModelSerializer):
     in_stock = serializers.BooleanField(read_only=True)
     display_name = serializers.CharField(read_only=True)
     attributes_display = serializers.CharField(read_only=True)
+    color_hex = serializers.SerializerMethodField()
     
     class Meta:
         model = ProductVariation
         fields = (
             'id', 'sku', 'name', 'display_name', 'attributes', 'attributes_display',
             'price_adjustment', 'final_price', 'stock_quantity', 
-            'in_stock', 'is_active', 'images', 'created_at', 'updated_at'
+            'in_stock', 'is_active', 'images', 'color_hex', 'created_at', 'updated_at'
         )
         read_only_fields = ('id', 'sku', 'created_at', 'updated_at')
+
+    def get_color_hex(self, obj):
+        """Get hex code for the color attribute if it exists."""
+        attributes = obj.attributes or {}
+        # Check for 'Color' or 'color' key
+        color_name = attributes.get('Color') or attributes.get('color')
+        
+        if color_name:
+            try:
+                color_obj = Color.objects.filter(name__iexact=color_name).first()
+                if color_obj:
+                    return color_obj.hex_code
+            except Exception:
+                pass
+        return None
     
     def validate_stock_quantity(self, value):
         """Ensure stock quantity is not negative."""
@@ -82,6 +100,25 @@ class ProductVariationCreateSerializer(serializers.ModelSerializer):
             VariationImage.objects.create(variation=variation, **image_data)
         
         return variation
+
+    def update(self, instance, validated_data):
+        """Update variation and its images."""
+        images_data = validated_data.pop('images', [])
+        
+        # Update standard fields
+        for attr, value in validated_data.items():
+            setattr(instance, attr, value)
+        instance.save()
+        
+        # Update images if provided
+        if images_data:
+            # For simplicity, we'll remove existing images and add new ones
+            # In a more complex app, we might want to update existing ones
+            instance.images.all().delete()
+            for image_data in images_data:
+                VariationImage.objects.create(variation=instance, **image_data)
+                
+        return instance
 
 
 class ProductSerializer(serializers.ModelSerializer):

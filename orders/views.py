@@ -3,7 +3,7 @@ from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated, IsAdminUser, AllowAny
 from .models import Order
-from .serializers import OrderSerializer, OrderCreateSerializer, OrderListSerializer
+from .serializers import OrderSerializer, OrderCreateSerializer, OrderListSerializer, OrderAdminUpdateSerializer
 
 
 class AdminOrderViewSet(viewsets.ModelViewSet):
@@ -18,6 +18,8 @@ class AdminOrderViewSet(viewsets.ModelViewSet):
     def get_serializer_class(self):
         if self.action == 'list':
             return OrderListSerializer
+        if self.action in ['update', 'partial_update']:
+            return OrderAdminUpdateSerializer
         return OrderSerializer
 
 

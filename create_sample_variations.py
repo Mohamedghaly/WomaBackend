@@ -11,6 +11,7 @@ import django
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'ecommerce_project.settings')
 django.setup()
 
+from decimal import Decimal
 from products.models import Category, Product, ProductVariation, VariationImage
 
 def create_sample_data():
@@ -44,7 +45,7 @@ def create_sample_data():
         {
             'color': 'Red',
             'size': 'Small',
-            'price_adjustment': 0,
+            'price_adjustment': Decimal('0.00'),
             'stock': 15,
             'images': [
                 'https://example.com/tshirt-red-front.jpg',
@@ -54,7 +55,7 @@ def create_sample_data():
         {
             'color': 'Red',
             'size': 'Medium',
-            'price_adjustment': 0,
+            'price_adjustment': Decimal('0.00'),
             'stock': 20,
             'images': [
                 'https://example.com/tshirt-red-front.jpg',
@@ -64,7 +65,7 @@ def create_sample_data():
         {
             'color': 'Red',
             'size': 'Large',
-            'price_adjustment': 2.00,
+            'price_adjustment': Decimal('2.00'),
             'stock': 18,
             'images': [
                 'https://example.com/tshirt-red-front.jpg',
@@ -74,7 +75,7 @@ def create_sample_data():
         {
             'color': 'Blue',
             'size': 'Small',
-            'price_adjustment': 0,
+            'price_adjustment': Decimal('0.00'),
             'stock': 12,
             'images': [
                 'https://example.com/tshirt-blue-front.jpg',
@@ -84,7 +85,7 @@ def create_sample_data():
         {
             'color': 'Blue',
             'size': 'Medium',
-            'price_adjustment': 0,
+            'price_adjustment': Decimal('0.00'),
             'stock': 25,
             'images': [
                 'https://example.com/tshirt-blue-front.jpg',
@@ -94,7 +95,7 @@ def create_sample_data():
         {
             'color': 'Blue',
             'size': 'Large',
-            'price_adjustment': 2.00,
+            'price_adjustment': Decimal('2.00'),
             'stock': 22,
             'images': [
                 'https://example.com/tshirt-blue-front.jpg',
@@ -104,7 +105,7 @@ def create_sample_data():
         {
             'color': 'Black',
             'size': 'Small',
-            'price_adjustment': 0,
+            'price_adjustment': Decimal('0.00'),
             'stock': 10,
             'images': [
                 'https://example.com/tshirt-black-front.jpg',
@@ -114,7 +115,7 @@ def create_sample_data():
         {
             'color': 'Black',
             'size': 'Medium',
-            'price_adjustment': 0,
+            'price_adjustment': Decimal('0.00'),
             'stock': 30,
             'images': [
                 'https://example.com/tshirt-black-front.jpg',
@@ -124,7 +125,7 @@ def create_sample_data():
         {
             'color': 'Black',
             'size': 'Large',
-            'price_adjustment': 2.00,
+            'price_adjustment': Decimal('2.00'),
             'stock': 28,
             'images': [
                 'https://example.com/tshirt-black-front.jpg',
@@ -134,12 +135,22 @@ def create_sample_data():
     ]
     
     print("Creating product variations...")
+    print("Creating product variations...")
     for var_data in variations_data:
+        # Construct name and attributes
+        color = var_data['color']
+        size = var_data['size']
+        name = f"{color} {size}"
+        attributes = {
+            "Color": color,
+            "Size": size
+        }
+        
         variation, created = ProductVariation.objects.get_or_create(
             product=tshirt,
-            color=var_data['color'],
-            size=var_data['size'],
+            name=name,
             defaults={
+                'attributes': attributes,
                 'price_adjustment': var_data['price_adjustment'],
                 'stock_quantity': var_data['stock'],
                 'is_active': True
@@ -155,9 +166,9 @@ def create_sample_data():
                     is_primary=(idx == 0),
                     display_order=idx
                 )
-            print(f"  ✅ Created: {variation.color} - {variation.size} (SKU: {variation.sku}) | Stock: {variation.stock_quantity} | Price: ${variation.final_price}")
+            print(f"  ✅ Created: {variation.name} (SKU: {variation.sku}) | Stock: {variation.stock_quantity} | Price: ${variation.final_price}")
         else:
-            print(f"  📌 Exists: {variation.color} - {variation.size}")
+            print(f"  📌 Exists: {variation.name}")
     
     print(f"\n🎉 Sample data created successfully!")
     print(f"\n📊 Summary:")
@@ -167,13 +178,13 @@ def create_sample_data():
     print(f"  - Total images: {VariationImage.objects.filter(variation__product=tshirt).count()}")
     
     # Print example variation details
-    example_var = ProductVariation.objects.filter(product=tshirt, color='Red', size='Medium').first()
+    example_var = ProductVariation.objects.filter(product=tshirt, name='Red Medium').first()
     if example_var:
         print(f"\n📝 Example Variation:")
         print(f"  ID: {example_var.id}")
         print(f"  SKU: {example_var.sku}")
-        print(f"  Color: {example_var.color}")
-        print(f"  Size: {example_var.size}")
+        print(f"  Name: {example_var.name}")
+        print(f"  Attributes: {example_var.attributes}")
         print(f"  Final Price: ${example_var.final_price}")
         print(f"  In Stock: {example_var.stock_quantity} units")
         print(f"  Images: {example_var.images.count()}")

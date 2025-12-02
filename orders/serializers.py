@@ -1,3 +1,4 @@
+from django.db import transaction
 from rest_framework import serializers
 from .models import Order, OrderItem
 from products.models import Product, ProductVariation
@@ -7,11 +8,17 @@ class OrderItemSerializer(serializers.ModelSerializer):
     """Serializer for order items."""
     product_name = serializers.CharField(source='product.name', read_only=True)
     variation_name = serializers.CharField(source='variation.__str__', read_only=True)
+    variation_details = serializers.SerializerMethodField()
     
     class Meta:
         model = OrderItem
-        fields = ('id', 'product', 'variation', 'quantity', 'price_at_purchase', 'subtotal', 'product_name', 'variation_name')
+        fields = ('id', 'product', 'variation', 'quantity', 'price_at_purchase', 'subtotal', 'product_name', 'variation_name', 'variation_details')
         read_only_fields = ('price_at_purchase',)
+
+    def get_variation_details(self, obj):
+        if obj.variation:
+            return obj.variation.attributes
+        return None
 
 
 class OrderCreateItemSerializer(serializers.Serializer):
@@ -28,7 +35,7 @@ class OrderCreateSerializer(serializers.ModelSerializer):
     
     class Meta:
         model = Order
-        fields = ('id', 'shipping_address', 'items', 'total_amount', 'customer_name', 'customer_email')
+        fields = ('id', 'shipping_address', 'items', 'total_amount', 'customer_name', 'customer_email', 'customer_phone')
         read_only_fields = ('total_amount', 'id')
     
     def create(self, validated_data):
@@ -80,7 +87,7 @@ class OrderSerializer(serializers.ModelSerializer):
     
     class Meta:
         model = Order
-        fields = ('id', 'customer', 'customer_email', 'customer_name', 'status', 'total_amount', 'shipping_address', 'created_at', 'items')
+        fields = ('id', 'customer', 'customer_email', 'customer_name', 'customer_phone', 'status', 'total_amount', 'shipping_address', 'created_at', 'items')
         read_only_fields = ('customer', 'status', 'total_amount', 'created_at')
 
     def get_customer_email(self, obj):
@@ -96,7 +103,7 @@ class OrderListSerializer(serializers.ModelSerializer):
     
     class Meta:
         model = Order
-        fields = ('id', 'customer_email', 'customer_name', 'status', 'total_amount', 'item_count', 'created_at')
+        fields = ('id', 'customer_email', 'customer_name', 'customer_phone', 'status', 'total_amount', 'item_count', 'created_at')
     
     def get_customer_email(self, obj):
         if obj.customer:
@@ -105,3 +112,37 @@ class OrderListSerializer(serializers.ModelSerializer):
     
     def get_item_count(self, obj):
         return obj.items.count()
+
+
+class OrderAdminUpdateSerializer(serializers.ModelSerializer):
+    """Serializer for admin order updates (status)."""
+    class Meta:
+        model = Order
+        fields = ('status',)
+
+    def validate(self, data):
+        """Prevent changing status if order is already completed or cancelled."""
+        if self.instance.status in ['completed', 'cancelled']:
+            raise serializers.ValidationError(f"Cannot change status of an order that is already {self.instance.status}.")
+        return data
+
+    def update(self, instance, validated_data):
+        new_status = validated_data.get('status')
+        old_status = instance.status
+        
+        with transaction.atomic():
+            if new_status == 'cancelled' and old_status != 'cancelled':
+                # Return items to stock
+                for item in instance.items.select_related('product', 'variation').all():
+                    if item.variation:
+                        item.variation.stock_quantity += item.quantity
+                        item.variation.save()
+                        # Remove relation to allow variation deletion
+                        item.variation = None
+                        item.save()
+                    else:
+                        item.product.stock_quantity += item.quantity
+                        item.product.save()
+            
+            return super().update(instance, validated_data)
+

@@ -92,17 +92,7 @@ class AdminProductVariationViewSet(viewsets.ModelViewSet):
         
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
     
-    @action(detail=True, methods=['post'])
-    def add_image(self, request, id=None):
-        """Add an image to a variation."""
-        variation = self.get_object()
-        serializer = VariationImageSerializer(data=request.data)
-        
-        if serializer.is_valid():
-            serializer.save(variation=variation)
-            return Response(serializer.data, status=status.HTTP_201_CREATED)
-        
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
 
 
 class CategoryViewSet(viewsets.ReadOnlyModelViewSet):

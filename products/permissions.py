@@ -11,8 +11,10 @@ class IsAdminUser(permissions.BasePermission):
         return (
             request.user and
             request.user.is_authenticated and
-            hasattr(request.user, 'role') and
-            request.user.role == 'admin'
+            (
+                (hasattr(request.user, 'role') and request.user.role == 'admin') or
+                request.user.is_superuser
+            )
         )
 
 
@@ -30,6 +32,8 @@ class IsAdminOrReadOnly(permissions.BasePermission):
         return (
             request.user and
             request.user.is_authenticated and
-            hasattr(request.user, 'role') and
-            request.user.role == 'admin'
+            (
+                (hasattr(request.user, 'role') and request.user.role == 'admin') or
+                request.user.is_superuser
+            )
         )
