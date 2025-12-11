@@ -163,11 +163,23 @@ class ProductVariation(models.Model):
     def save(self, *args, **kwargs):
         """Auto-generate SKU if not provided."""
         if not self.sku:
-            # Generate SKU from product ID and variation name
+            import random
+            import string
+            # Generate SKU from product ID and variation name + random suffix to ensure uniqueness
             base = str(self.product.id)[:8]
-            name_part = self.name[:15].upper().replace(' ', '-')
-            self.sku = f"{base}-{name_part}"
-        super().save(*args, **kwargs)
+            name_part = self.name[:10].upper().replace(' ', '-')
+            random_suffix = ''.join(random.choices(string.ascii_uppercase + string.digits, k=4))
+            self.sku = f"{base}-{name_part}-{random_suffix}"
+            
+        try:
+            super().save(*args, **kwargs)
+        except Exception:
+            # If still collision (very rare), try one more time with new random suffix
+            import random
+            import string
+            random_suffix = ''.join(random.choices(string.ascii_uppercase + string.digits, k=4))
+            self.sku = f"{base}-{name_part}-{random_suffix}"
+            super().save(*args, **kwargs)
 
 
 

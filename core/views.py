@@ -55,3 +55,34 @@ class DashboardStatsView(APIView):
             'total_revenue': total_revenue,
             'total_customers': total_customers
         })
+
+class WebsiteSettingsView(APIView):
+    """
+    Get or update website settings (singleton).
+    GET: Public access to read settings
+    PUT: Admin only to update settings
+    """
+    def get_permissions(self):
+        if self.request.method == 'GET':
+            return []  # Public access for GET
+        return [IsAdminUser()]  # Admin only for PUT
+    
+    def get(self, request):
+        from .models import WebsiteSettings
+        from .serializers import WebsiteSettingsSerializer
+        
+        settings = WebsiteSettings.load()
+        serializer = WebsiteSettingsSerializer(settings)
+        return Response(serializer.data)
+    
+    def put(self, request):
+        from .models import WebsiteSettings
+        from .serializers import WebsiteSettingsSerializer
+        
+        settings = WebsiteSettings.load()
+        serializer = WebsiteSettingsSerializer(settings, data=request.data, partial=True)
+        
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data)
+        return Response(serializer.errors, status=400)

@@ -15,7 +15,6 @@ class Order(models.Model):
         ('cancelled', 'Cancelled'),
     )
     
-    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     customer = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='orders', null=True, blank=True)
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')
     total_amount = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
@@ -50,7 +49,6 @@ class OrderItem(models.Model):
     Individual items in an order.
     Supports ordering both simple products and product variations.
     """
-    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     order = models.ForeignKey(Order, related_name='items', on_delete=models.CASCADE)
     product = models.ForeignKey(Product, related_name='order_items', on_delete=models.PROTECT)
     variation = models.ForeignKey(

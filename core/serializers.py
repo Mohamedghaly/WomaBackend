@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import Color, Size, DeliveryLocation
+from .models import Color, Size, DeliveryLocation, WebsiteSettings
 
 class ColorSerializer(serializers.ModelSerializer):
     class Meta:
@@ -15,3 +15,9 @@ class DeliveryLocationSerializer(serializers.ModelSerializer):
     class Meta:
         model = DeliveryLocation
         fields = '__all__'
+
+class WebsiteSettingsSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = WebsiteSettings
+        fields = '__all__'
+        read_only_fields = ['created_at', 'updated_at']
